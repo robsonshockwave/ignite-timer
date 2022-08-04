@@ -2,6 +2,7 @@ import { Play } from 'phosphor-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
+import { differenceInSeconds } from 'date-fns'
 
 import {
   CountdownContainer,
@@ -12,7 +13,7 @@ import {
   StartCountdownButton,
   TaskInput,
 } from './styles'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Schema = formato
 const newCycleFormValidatorSchema = zod.object({
@@ -32,6 +33,7 @@ interface Cycle {
   id: string
   task: string
   minutes: number
+  stardDate: Date
 }
 
 type NewCycleFormData = zod.infer<typeof newCycleFormValidatorSchema>
@@ -50,6 +52,24 @@ export function Home() {
       },
     })
 
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+
+  useEffect(() => {
+    let interval: number
+
+    if (activeCycle) {
+      interval = setInterval(() => {
+        setAmountSecondsPassed(
+          differenceInSeconds(new Date(), activeCycle.stardDate),
+        )
+      }, 1000)
+    }
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [activeCycle])
+
   function handleCreateNewCicle(data: NewCycleFormData) {
     const id = String(new Date().getTime())
 
@@ -57,15 +77,15 @@ export function Home() {
       id,
       task: data.task,
       minutes: data.minutesAmount,
+      stardDate: new Date(),
     }
 
     setCycles((state) => [...state, newCycle])
     setActiveCycleId(id)
+    setAmountSecondsPassed(0)
 
     reset()
   }
-
-  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
 
   const totalSeconds = activeCycle ? activeCycle.minutes * 60 : 0
   const currentSeconts = activeCycle ? totalSeconds - amountSecondsPassed : 0
@@ -75,6 +95,12 @@ export function Home() {
 
   const minutes = String(minutesAmount).padStart(2, '0')
   const seconds = String(secondsAmount).padStart(2, '0')
+
+  useEffect(() => {
+    if (activeCycle) {
+      document.title = `${minutes}:${seconds} - ${activeCycle.task}`
+    }
+  }, [minutes, seconds, activeCycle])
 
   const task = watch('task')
   const isSubmitDisabled = !task
