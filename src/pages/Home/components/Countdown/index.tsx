@@ -1,20 +1,28 @@
 import { differenceInSeconds } from 'date-fns'
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { CyclesContext } from '../..'
 import { CountdownContainer, Separator } from './styles'
 
-interface CountdownProps {
-  activeCycle: any
-  setCycles: any
-  activeCycleId: any
-}
-
-export function Countdown({
-  activeCycle,
-  setCycles,
-  activeCycleId,
-}: CountdownProps) {
+export function Countdown() {
+  const { activeCycle, activeCycleId, markCurrentCycleAsFinised } =
+    useContext(CyclesContext)
   const [amountSecondsPassed, setAmountSecondsPassed] = useState<number>(0)
+
   const totalSeconds = activeCycle ? activeCycle.minutes * 60 : 0
+
+  const currentSeconts = activeCycle ? totalSeconds - amountSecondsPassed : 0
+
+  const minutesAmount = Math.floor(currentSeconts / 60)
+  const secondsAmount = currentSeconts % 60
+
+  const minutes = String(minutesAmount).padStart(2, '0')
+  const seconds = String(secondsAmount).padStart(2, '0')
+
+  useEffect(() => {
+    if (activeCycle) {
+      document.title = `${minutes}:${seconds} - ${activeCycle.task}`
+    }
+  }, [minutes, seconds, activeCycle])
 
   useEffect(() => {
     let interval: number
@@ -27,18 +35,7 @@ export function Countdown({
         )
 
         if (secondsDifference >= totalSeconds) {
-          setCycles((state) =>
-            state.map((cycle) => {
-              if (cycle.id === activeCycleId) {
-                return {
-                  ...cycle,
-                  finishedDate: new Date(),
-                }
-              } else {
-                return cycle
-              }
-            }),
-          )
+          markCurrentCycleAsFinised()
 
           setAmountSecondsPassed(totalSeconds)
           clearInterval(interval)
@@ -51,7 +48,7 @@ export function Countdown({
     return () => {
       clearInterval(interval)
     }
-  }, [activeCycle, totalSeconds, activeCycleId])
+  }, [activeCycle, totalSeconds, activeCycleId, markCurrentCycleAsFinised])
 
   return (
     <CountdownContainer>
